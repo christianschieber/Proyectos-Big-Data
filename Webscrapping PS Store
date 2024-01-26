@@ -1,0 +1,45 @@
+!pip install selenium               
+!apt-get update -y         
+!apt install chromium-chromedriver -y 
+!cp /usr/lib/chromium-browser/chromedriver /usr/bin
+!pip install beautifulsoup4      
+
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+
+
+driver=webdriver.Chrome()
+
+url="https://store.playstation.com/es-es/category/1bc5f455-a48e-43d1-b429-9c52fa78bb4d/1"
+
+driver.get(url)
+
+
+tarjetas_productos = WebDriverWait(driver, 10).until(
+    EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.psw-product-tile'))
+)
+
+for tarjeta_producto in tarjetas_productos:
+
+    tipo_producto_elemento = tarjeta_producto.find_element(By.CSS_SELECTOR, '[data-qa$="product-type"]')
+    nombre_producto_elemento = tarjeta_producto.find_element(By.CSS_SELECTOR, '[data-qa$="product-name"]')
+    descuento_elemento = tarjeta_producto.find_element(By.CSS_SELECTOR, '[data-qa$="discount-badge"] [data-qa$="badge#text"]')
+    precio_elemento = tarjeta_producto.find_element(By.CSS_SELECTOR, '[data-qa$="price#display-price"]')
+    precio_original_elemento = tarjeta_producto.find_element(By.CSS_SELECTOR, '[data-qa$="price#price-strikethrough"]')
+
+    tipo_producto = tipo_producto_elemento.text.strip()
+    nombre_producto = nombre_producto_elemento.text.strip()
+    descuento = descuento_elemento.text.strip()
+    precio_oferta = precio_elemento.text.strip()
+    precio_original = precio_original_elemento.text.strip()
+
+    print(f'Tipo de Producto: {tipo_producto}')
+    print(f'Nombre del Producto: {nombre_producto}')
+    print(f'Descuento: {descuento}')
+    print(f'Precio de Oferta: {precio_oferta}')
+    print(f'Precio Original: {precio_original}')
+    print('\n')
