@@ -1,0 +1,205 @@
+import math
+import random
+
+
+class Jugador():
+    def __init__(self, letter):
+        self.letter = letter
+
+    def get_move(self, game):
+        pass
+
+
+class Humano(Jugador):
+    def __init__(self, letter):
+        super().__init__(letter)
+
+    def get_move(self, game):
+        cuadro_valido = False
+        val = None
+        while not cuadro_valido:
+            square = input(self.letter + ', es tu turno. Introduce tu movida (0-8): ')
+            try:
+                val = int(square)
+                if val not in game.available_moves():
+                    raise ValueError
+                cuadro_valido = True
+            except ValueError:
+                print('Espacio invalido. Intenta otra vez.')
+        return val
+
+#hace movidas random para la computadora, asi las movidas que hacen no son predeterminadas y siempre van a 
+#haber movidas diferentes a lo largo del juego. solo sirve para la primera movida porque no hay valores
+class ComputadoraRandom(Jugador):
+    def __init__(self, letter):
+        super().__init__(letter)
+
+    def get_move(self, game):
+        square = random.choice(game.available_moves())
+        return square
+
+
+#usa el minimax algoritmo para hacer movidas inteligentes, asi maximiza las posibilidades de ganar o empatar
+#pero nunca perder
+class ComputadoraInteligente(Jugador): #define una nueva clase llamada "ComputadoraInteligente" que es una subclase de la clase "Jugador"
+    def __init__(self, letter):#contruye la clase "ComputadoraInteligente"
+        super().__init__(letter)
+
+    def get_move(self, game):
+        if len(game.available_moves()) == 9:
+            square = random.choice(game.available_moves())
+        else:
+            square = self.minimax(game, self.letter)['position']
+        return square
+
+    def minimax(self, state, jugador):
+        jugador_max = self.letter  # el jugador
+        otro_jugador = 'O' if jugador == 'X' else 'X'
+
+        # revisar si la movida anterior es una movida ganadora
+        if state.current_winner == otro_jugador:
+            return {'position': None, 'score': 1 * (state.num_empty_squares() + 1) if otro_jugador == jugador_max else -1 * (
+                        state.num_empty_squares() + 1)}
+        elif not state.empty_squares():
+            return {'position': None, 'score': 0}
+
+        if jugador == jugador_max:
+            best = {'position': None, 'score': -math.inf}  # cada puntaje deberia maximizar
+        else:
+            best = {'position': None, 'score': math.inf}  # cada puntaje deberia minimizar
+        for possible_move in state.available_moves():
+            state.make_move(possible_move, jugador)
+            sim_score = self.minimax(state, otro_jugador)  # simular un juego despues de hacer la movida
+
+            # undo la movida
+            state.board[possible_move] = ' '
+            state.current_winner = None
+            sim_score['position'] = possible_move  # representa la movida optima 
+
+            if jugador == jugador_max:  # X es el jugador
+                if sim_score['score'] > best['score']:
+                    best = sim_score
+            else:
+                if sim_score['score'] < best['score']:
+                    best = sim_score
+        return best
+
+class TicTacToe():
+    def __init__(self):
+        self.board = self.make_board()
+        self.current_winner = None
+
+    @staticmethod
+    def make_board():
+        return [' ' for _ in range(9)]
+
+    def print_board(self):
+        for i in range(0, 9, 3):
+            print(" | ".join(self.board[i:i+3]))
+            if i < 6:
+                print("---------")
+                    
+
+    @staticmethod
+    def print_board_nums():
+        # 0 | 1 | 2
+        number_board = [[str(i) for i in range(j*3, (j+1)*3)] for j in range(3)]
+        for row in number_board:
+            print( '  |  '.join(row))
+            if row in number_board:
+                print("-------------")
+
+    def make_move(self, square, letter):
+        if self.board[square] == ' ':
+            self.board[square] = letter
+            if self.winner(square, letter):
+                self.current_winner = letter
+            return True
+        return False
+
+    def winner(self, square, letter):
+        
+        row_ind = math.floor(square / 3)
+        row = self.board[row_ind*3:(row_ind+1)*3]
+        
+        if all([s == letter for s in row]):
+            return True
+        col_ind = square % 3
+        column = [self.board[col_ind+i*3] for i in range(3)]
+       
+        if all([s == letter for s in column]):
+            return True
+        if square % 2 == 0:
+            diagonal1 = [self.board[i] for i in [0, 4, 8]]
+            
+            if all([s == letter for s in diagonal1]):
+                return True
+            diagonal2 = [self.board[i] for i in [2, 4, 6]]
+            
+            if all([s == letter for s in diagonal2]):
+                return True
+        return False
+
+    def empty_squares(self):
+        return ' ' in self.board
+
+    def num_empty_squares(self):
+        return self.board.count(' ')
+
+    def available_moves(self):
+        return [i for i, x in enumerate(self.board) if x == " "]
+
+
+def play(game, x_player, o_player, print_game=True):
+
+    if print_game:
+        game.print_board_nums()
+
+    letter = 'X'
+    while game.empty_squares():
+        if letter == 'O':
+            square = o_player.get_move(game)
+        else:
+            square = x_player.get_move(game)
+        if game.make_move(square, letter):
+
+            if print_game:
+                print(letter + ' ha movido al espacio {}'.format(square))
+                game.print_board()
+                print('')
+
+            if game.current_winner:
+                if print_game:
+                    print(letter + ' ha gando!')
+                return letter  # termina el loop y cierra el juego 
+            letter = 'O' if letter == 'X' else 'X'  # cambia el jugador
+        
+         
+    if print_game:
+        print('¡Hemos empatado!')
+
+
+
+if __name__ == '__main__':
+    print("'X' empieza el juego.")
+    while True:
+        choice = input("Quieres jugar como 'X' o 'O'? (ingresa 'X' o 'O'): ").upper()
+
+        if choice == 'X':
+            x_player = Humano('X')
+            o_player = ComputadoraInteligente('O')
+        elif choice == 'O':
+            x_player = ComputadoraInteligente('X')
+            o_player = Humano('O')
+        else:
+            print("Opción no válida. Debes ingresar 'X' o 'O'.")
+            continue
+
+        t = TicTacToe()
+        
+        play(t, x_player, o_player, print_game=True)
+
+        play_again = input('¿Jugamos devuelta? (si/no): ')
+        if play_again.lower() != 'si':
+            print("¡Gracias por jugar! ¡Hasta luego!")
+            break
