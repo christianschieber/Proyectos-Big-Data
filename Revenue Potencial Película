@@ -1,0 +1,72 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+from sklearn.impute import SimpleImputer
+
+
+df = pd.read_csv("./imdb_top_1000.csv")
+
+df['Runtime'] = df['Runtime'].str.replace(' min', '').astype(float)
+df['Gross'] = df['Gross'].replace('[\$,]', '', regex=True).astype(float)
+
+imputer = SimpleImputer(strategy='most_frequent')
+df[['Director', 'Star1', 'Genre']] = imputer.fit_transform(df[['Director', 'Star1', 'Genre']])
+df['Gross'] = imputer.fit_transform(df[['Gross']])
+
+director_avg_revenue = df.groupby('Director')['Gross'].mean()
+star_avg_revenue = df.groupby('Star1')['Gross'].mean()
+genre_avg_revenue = df.groupby('Genre')['Gross'].mean()
+
+df = pd.get_dummies(df, columns=['Director', 'Star1', 'Genre'])
+
+revenue_features = [col for col in df.columns if col.startswith(('Director', 'Star1', 'Genre'))]
+revenue_target = 'Gross'
+
+X_revenue = df[revenue_features]
+y_revenue = df[revenue_target]
+
+revenue_model = LinearRegression()
+revenue_model.fit(X_revenue, y_revenue)
+
+director_input = input("Ingrese el Director: ")
+star_input = input("Ingrese la Estrella: ")
+genre_input = input("Ingrese el Género: ")
+
+director_matches = [col for col in X_revenue.columns if col.startswith(f'Director_{director_input}')]
+star_matches = [col for col in X_revenue.columns if col.startswith(f'Star1_{star_input}')]
+genre_matches = [col for col in X_revenue.columns if col.startswith(f'Genre_{genre_input}')]
+
+if not any(director_matches) or not any(star_matches) or not any(genre_matches):
+    print("La entrada del usuario no coincide completamente con el conjunto de datos.")
+    exit()
+    
+avg_revenue = (director_avg_revenue.get(director_input, 0) + 
+               star_avg_revenue.get(star_input, 0) + 
+               genre_avg_revenue.get(genre_input, 0)) / 3
+
+
+user_input = pd.DataFrame(0, columns=X_revenue.columns, index=[0])
+user_input.loc[0, director_matches[0]] = 1
+user_input.loc[0, star_matches[0]] = 1
+user_input.loc[0, genre_matches[0]] = 1
+
+revenue_prediction = revenue_model.predict(user_input)[0] + avg_revenue
+
+print(f"La recaudación potencial es de ${revenue_prediction:,.2f}")
+
+plt.figure(figsize=(15, 5))
+plt.subplot(1, 3, 1)
+sns.histplot(df['Gross'], bins=20, kde=True)
+plt.title('Distribución del Revenue por Director')
+
+plt.subplot(1, 3, 2)
+sns.histplot(df['Gross'], bins=20, kde=True)
+plt.title('Distribución del Revenue por Estrella')
+
+plt.subplot(1, 3, 3)
+sns.histplot(df['Gross'], bins=20, kde=True)
+plt.title('Distribución del Revenue por Género')
+
+plt.tight_layout()
+plt.show()
